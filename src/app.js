@@ -1,37 +1,12 @@
 'use strict';
 
+const {getDependency, getDepTree} = require("./dependencyHandler");
 const express = require('express');
-const axios = require('axios');
-const NodeCache = require("node-cache");
 
 let app = express();
 app.use(express.json());
-const cache = new NodeCache();
+
 let indent = 1;
-
-function getTree(arr) {
-    const root = [];
-    const map = {};
-
-    arr.forEach(node => {
-        if (!node.parentId) {
-            return root.push(node);
-        }
-
-        let parentIndex = map[node.parentId];
-        if (!parentIndex) {
-            parentIndex = arr.findIndex(el => el.id === node.parentId);
-            map[node.parentId] = parentIndex;
-        }
-
-        if (!arr[parentIndex].children) {
-            return arr[parentIndex].children = [node];
-        }
-        arr[parentIndex].children.push(node);
-    });
-
-    return root;
-}
 
 function printNodesInTree(tree) {
     tree.forEach(function (node) {
@@ -54,54 +29,10 @@ function printTree(tree) {
     printNodesInTree(tree);
 }
 
-async function getDepFromNpm(packageName, version) {
-    const url = `https://registry.npmjs.org/${packageName}/${version}`;
-    const response = await axios.get(url);
-    //TODO: do we need to include devDependency?
-    return response.data.dependencies;
-}
-
-function normalizeVersion(version) {
-    if (version.includes('~')) {
-        version = version.split('~').join('');
-    }
-    if (version.includes('^')) {
-        version = version.split('^').join('');
-    }
-    return version;
-}
-
-function getDependencyNode(deps, name) {
-    let arr = [];
-    for (let dep in deps) {
-        const depName = `${dep}:${deps[dep]}`;
-        const item = {id: depName, parentId: name};
-        arr.push(item);
-    }
-    return arr;
-}
-
-async function getDependency(name, packageName, version) {
-    let dependencies;
-    version = normalizeVersion(version);
-
-    const cachedDep = cache.get(name);
-    if (!cachedDep) {
-        dependencies = await getDepFromNpm(packageName, version);
-
-        cache.set(name, dependencies);
-        return getDependencyNode(dependencies, name);
-    } else {
-        console.log("Getting dependencies from cache");
-        return getDependencyNode(cachedDep, name);
-    }
-}
-
 async function handler() {
-    console.log("App is running...");
-
     app.get('/package/:packageName/:version', async function (req, res) {
         indent = 1;
+        //TODO: add input validation
         const {packageName, version} = req.params;
         const name = `${packageName}:${version}`;
         let arr = [];
@@ -119,7 +50,7 @@ async function handler() {
                 }
             }
 
-            let tree = getTree(arr);
+            let tree = getDepTree(arr);
             printTree(tree);
 
             res.status(200).json({tree});
@@ -128,8 +59,9 @@ async function handler() {
             res.send('error');
         }
     });
-
-    app.listen(8000);
 }
 
 handler();
+
+module.exports ={handler};
+module.exports = app;

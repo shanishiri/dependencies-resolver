@@ -31,7 +31,9 @@
     "jest-extended": "^0.11.2",
     "webpack": "^4.41.5",
     "webpack-cli": "^3.3.10",
-    "zip-webpack-plugin": "^3.0.0"
+    "zip-webpack-plugin": "^3.0.0",
+    "axios-mock-adapter": "^1.19.0",
+    "supertest": "^6.1.3"
   },
   "jest": {
     "testEnvironment": "node",
